@@ -49,7 +49,7 @@ async def main(args: argparse.Namespace):
 if __name__ == '__main__':
 
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(prog="echo.py", description="Server for the attack")
+    parser = argparse.ArgumentParser(prog="echo.py", description="Demo server for the attack")
     parser.add_argument("-p", "--port", metavar='PORT', type=int, default=2440, help="Port to listen on")
     args = parser.parse_args()
 
