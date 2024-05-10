@@ -1,0 +1,8 @@
+# Create a TUN interface we can forward packets to and inject packets from
+
+[NetDev]
+Name=tun0
+Kind=tun
+
+[TUN]
+User=ubuntu

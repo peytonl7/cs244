@@ -1,0 +1,10 @@
+# Create a TUN interface we can forward packets to and inject packets from
+
+[Match]
+Name=tun0
+Kind=tun
+
+[Network]
+Address=169.254.244.0/24
+LinkLocalAddressing=yes
+ConfigureWithoutCarrier=yes
