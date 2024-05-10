@@ -1,0 +1,12 @@
+# Add a route to the external network. Previously, we could do this in AWS,
+# but that requires our primary interface to be on the internal network, which
+# makes it hard to connect to the internet.
+
+network:
+  version: 2
+  ethernets:
+    enX1:
+      routes:
+        - to: "10.244.129.0/24"
+          via: "10.244.1.4"
+          metric: 100
