@@ -1,7 +1,17 @@
 #include "tcp-packet.hpp"
 
-// Compute the checksum of some data, as is required by IP and TCP
-uint16_t cksum(const std::string &data) {
+namespace {
+
+// Perform the folding step required by checksum computation.
+uint16_t fold(uint32_t sum) {
+  while ((sum >> 16) != 0)
+    sum = (sum & 0xffff) + (sum >> 16);
+  return sum;
+}
+
+// Compute the checksum of some data, as is required by IP and TCP. This doesn't
+// bitwise-NOT the result, so the caller should post-process.
+uint16_t cksum_neg(const std::string_view data) {
   // Sum over all the pairs of bytes in the data. If the last byte is not part
   // of a pair, pad with zero.
   uint32_t sum = 0;
@@ -11,12 +21,13 @@ uint16_t cksum(const std::string &data) {
     uint8_t lsb = i + 1 < data.size() ? data[i + 1] : 0;
     sum += msb << 8 | lsb;
   }
-  // Fold the sum into a 16-bit number
-  while ((sum >> 16) != 0)
-    sum = (sum & 0xffff) + (sum >> 16);
-  // Done
-  return ~sum;
+  // Fold and return. Don't bitwise-NOT
+  return fold(sum);
 }
+
+// Compute the checksum of some data, as is required by IP and TCP. This one
+// does the bitwise-NOT, so the caller doesn't have to.
+uint16_t cksum(const std::string_view data) { return ~cksum_neg(data); }
 
 // Write an unsigned integer to a string's iterator, in big-endian order. This
 // very specific function is used to write integers into IP and TCP headers.
@@ -24,6 +35,8 @@ template <class V> static void wr_u(std::string::iterator it, V val) {
   for (size_t i = 0; i < sizeof(V); i++)
     *it++ = (val >> (8 * (sizeof(V) - 1 - i))) & 0xff;
 }
+
+}; // namespace
 
 std::optional<std::string> TCPPacket::serialize() const noexcept {
 
@@ -40,7 +53,13 @@ std::optional<std::string> TCPPacket::serialize() const noexcept {
 
   // Compute checksums
   uint16_t ip_cksum = cksum(ip_header);
-  uint16_t tcp_cksum = cksum(pseudo_header + tcp_header + data);
+  uint16_t tcp_cksum;
+  {
+    uint32_t c1 = cksum_neg(pseudo_header);
+    uint32_t c2 = cksum_neg(tcp_header);
+    uint32_t c3 = cksum_neg(data);
+    tcp_cksum = ~fold(c1 + c2 + c3);
+  }
 
   // Put the checksums in the headers
   wr_u<uint16_t>(ip_header.begin() + 10, ip_cksum);
@@ -111,7 +130,8 @@ std::string TCPPacket::serialize_tcp_header(size_t data_length) const noexcept {
   return ret;
 }
 
-std::string TCPPacket::serialize_pseudo_header(size_t data_length) const noexcept {
+std::string
+TCPPacket::serialize_pseudo_header(size_t data_length) const noexcept {
 
   std::string ret(12, 0);
 
