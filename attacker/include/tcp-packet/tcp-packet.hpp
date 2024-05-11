@@ -63,6 +63,7 @@ struct TCPPacket {
   std::string data;
   /**
     \brief Maximum length of the `data`
+    \details This only applies to packets we send, not received packets
     \see data
   */
   static const size_t MAX_DATA_LENGTH = 256;

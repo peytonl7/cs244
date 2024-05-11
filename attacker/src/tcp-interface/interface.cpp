@@ -24,19 +24,18 @@ TCPInterface::TCPInterface(const std::string &interface) : fd_(-1) {
   std::strncpy(ifr_base.ifr_name, interface.c_str(), IFNAMSIZ);
 
   // Create a socket and buffer for `netlink` messages. We don't want to miss
-  // anything, so we do this first. Create the auxiliary structrures before the
-  // socket because we can't have declarations between `goto`s.
-  char nl_buf[4096];
-  struct sockaddr_nl nl_addr = {
-    .nl_family = AF_NETLINK,
-    .nl_groups = RTMGRP_LINK,
-  };
+  // anything, so we do this first.
   int nl_fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
   if (nl_fd < 0)
     goto cleanup;
-  // Try to bind the socket
-  if (bind(nl_fd, (struct sockaddr *)&nl_addr, sizeof(nl_addr)) != 0)
-    goto cleanup;
+  {
+    struct sockaddr_nl nl_addr = {
+        .nl_family = AF_NETLINK,
+        .nl_groups = RTMGRP_LINK,
+    };
+    if (bind(nl_fd, (struct sockaddr *)&nl_addr, sizeof(nl_addr)) != 0)
+      goto cleanup;
+  }
 
   // Open the TUN clone interface
   this->fd_ = open("/dev/net/tun", O_RDWR);
@@ -61,11 +60,12 @@ TCPInterface::TCPInterface(const std::string &interface) : fd_(-1) {
     // Wait in a loop. This is fine since the `read` is blocking.
     while (true) {
       // Read a packet from the `netlink` interface
-      int res = read(nl_fd, nl_buf, sizeof(nl_buf));
+      char buf[4096];
+      int res = read(nl_fd, buf, sizeof(buf));
       if (res < 0)
         goto cleanup;
       // Reinterpret the buffer as a packet
-      struct nlmsghdr *nlh = (struct nlmsghdr *)nl_buf;
+      struct nlmsghdr *nlh = (struct nlmsghdr *)buf;
       struct ifinfomsg *ifi = (struct ifinfomsg *)NLMSG_DATA(nlh);
       // Ignore things that aren't for the TUN device
       if (ifi->ifi_index != interface_index)
@@ -86,12 +86,10 @@ cleanup:
     close(this->fd_);
   if (nl_fd >= 0)
     close(nl_fd);
-  throw TCPInterface::SetupError {interface};
+  throw TCPInterface::SetupError{interface};
 }
 
-TCPInterface::~TCPInterface() noexcept {
-  close(this->fd_);
-}
+TCPInterface::~TCPInterface() noexcept { close(this->fd_); }
 
 bool TCPInterface::send(const TCPPacket &packet) {
   // Serialize the packet. This may fail, so return a boolean to indicate this
@@ -101,7 +99,7 @@ bool TCPInterface::send(const TCPPacket &packet) {
     return false;
   // Send the packet. This should not fail, so throw an exception if it does.
   if (write(this->fd_, serialized->data(), serialized->size()) < 0)
-    throw TCPInterface::SendError {};
+    throw TCPInterface::SendError{};
   // Return successfully
   return true;
 }
