@@ -1,2 +1,5 @@
+# Ignore IDE files
+.cache/
+
 # Build output
 build/
