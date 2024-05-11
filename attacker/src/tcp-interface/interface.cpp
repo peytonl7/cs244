@@ -19,8 +19,7 @@ TCPInterface::TCPInterface(const std::string &interface) : fd_(-1) {
 
   // Setup and `ifreq` structure for this interface. It's used a lot later, so
   // it's worth merging the common parts.
-  struct ifreq ifr_base;
-  std::memset(&ifr_base, 0, sizeof(ifr_base));
+  struct ifreq ifr_base {};
   std::strncpy(ifr_base.ifr_name, interface.c_str(), IFNAMSIZ);
 
   // Create a socket and buffer for `netlink` messages. We don't want to miss
@@ -29,9 +28,8 @@ TCPInterface::TCPInterface(const std::string &interface) : fd_(-1) {
   if (nl_fd < 0)
     goto cleanup;
   {
-    struct sockaddr_nl nl_addr = {
-        .nl_family = AF_NETLINK,
-        .nl_groups = RTMGRP_LINK,
+    struct sockaddr_nl nl_addr {
+      .nl_family = AF_NETLINK, .nl_groups = RTMGRP_LINK,
     };
     if (bind(nl_fd, (struct sockaddr *)&nl_addr, sizeof(nl_addr)) != 0)
       goto cleanup;
