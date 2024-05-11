@@ -1,4 +1,4 @@
-#include "tcp-raw/interface.hpp"
+#include "tcp-raw.hpp"
 
 #include <cstring>
 

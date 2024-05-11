@@ -12,11 +12,11 @@ FetchContent_Declare(
   yaml-cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
   GIT_TAG "0.8.0")
-FetchContent_MakeAvailable(argparse yaml-cpp)
+FetchContent_MakeAvailable(argparse)
 
 add_library(tcp-raw
-  src/tcp-raw/interface/interface.cpp
-  src/tcp-raw/interface/exceptions.cpp)
+  src/tcp-raw/interface.cpp
+  src/tcp-raw/exceptions.cpp)
 target_include_directories(tcp-raw
   PUBLIC include/tcp-raw/)
 

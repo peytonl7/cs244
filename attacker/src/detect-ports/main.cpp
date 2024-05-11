@@ -1,4 +1,4 @@
-#include "tcp-raw/interface.hpp"
+#include "tcp-raw.hpp"
 
 int main(int argc, char **argv) {
 
