@@ -1,4 +1,7 @@
+#include <unistd.h>
+
 #include "tcp-interface.hpp"
+#include "tcp-packet.hpp"
 
 int main(int argc, char **argv) {
 

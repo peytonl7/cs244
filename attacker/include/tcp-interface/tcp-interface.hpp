@@ -8,10 +8,11 @@
 #include <stdexcept>
 #include <string>
 
+#include "tcp-packet.hpp"
+
 class TCPInterface {
 
 public:
-
   /**
     \brief Constructs an interface over which TCP packets can be sent
     \param interface The name of the TUN device to use
@@ -20,7 +21,7 @@ public:
   /**
     \brief Closes the interface
   */
-  ~TCPInterface();
+  ~TCPInterface() noexcept;
 
   // Rule of 5: We have a custom destructor, so we should have a custom copy
   // constructor and copy assignment operator. We don't want to allow any
@@ -34,11 +35,27 @@ public:
   TCPInterface &operator=(TCPInterface &&) = delete;
 
   /**
+    \brief Send a TCP packet over this interface
+    \return Whether the packet could be serialized and thus sent
+    \throws SendError If the packet could not be sent
+  */
+  bool send(const TCPPacket& packet);
+
+  /**
     \brief Exception thrown when the TUN device cannot be opened
   */
   class SetupError : public std::runtime_error {
   public:
-    explicit SetupError(const std::string &interface);
+    explicit SetupError(const std::string &interface) noexcept
+        : std::runtime_error("Failed to open TUN device: " + interface){};
+  };
+  /**
+    \brief Exception thrown on send failure
+  */
+  class SendError : public std::runtime_error {
+  public:
+    explicit SendError() noexcept
+        : std::runtime_error("Failed to send on TUN device") {}
   };
 
 private:

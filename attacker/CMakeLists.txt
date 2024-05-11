@@ -14,11 +14,17 @@ FetchContent_Declare(
   GIT_TAG "0.8.0")
 FetchContent_MakeAvailable(argparse)
 
+add_library(tcp-packet
+  src/tcp-packet/packet.cpp)
+target_include_directories(tcp-packet
+  PUBLIC include/tcp-packet/)
+
 add_library(tcp-interface
-  src/tcp-interface/interface.cpp
-  src/tcp-interface/exceptions.cpp)
+  src/tcp-interface/interface.cpp)
 target_include_directories(tcp-interface
   PUBLIC include/tcp-interface/)
+target_link_libraries(tcp-interface
+  PUBLIC tcp-packet)
 
 add_executable(detect-ports
   src/detect-ports/main.cpp)

@@ -89,6 +89,19 @@ cleanup:
   throw TCPInterface::SetupError {interface};
 }
 
-TCPInterface::~TCPInterface() {
+TCPInterface::~TCPInterface() noexcept {
   close(this->fd_);
+}
+
+bool TCPInterface::send(const TCPPacket &packet) {
+  // Serialize the packet. This may fail, so return a boolean to indicate this
+  // failure mode.
+  std::optional<std::string> serialized = packet.serialize();
+  if (!serialized.has_value())
+    return false;
+  // Send the packet. This should not fail, so throw an exception if it does.
+  if (write(this->fd_, serialized->data(), serialized->size()) < 0)
+    throw TCPInterface::SendError {};
+  // Return successfully
+  return true;
 }
