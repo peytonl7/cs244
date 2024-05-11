@@ -1,4 +1,4 @@
-#include "tcp-raw.hpp"
+#include "tcp-interface.hpp"
 
 #include <cstring>
 
@@ -14,7 +14,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
-TCPRawInterface::TCPRawInterface(const std::string &interface) : fd_(-1) {
+TCPInterface::TCPInterface(const std::string &interface) : fd_(-1) {
   // Initially, the file descriptor is set to an invalid value.
 
   // Setup and `ifreq` structure for this interface. It's used a lot later, so
@@ -86,9 +86,9 @@ cleanup:
     close(this->fd_);
   if (nl_fd >= 0)
     close(nl_fd);
-  throw TCPRawInterface::SetupError {interface};
+  throw TCPInterface::SetupError {interface};
 }
 
-TCPRawInterface::~TCPRawInterface() {
+TCPInterface::~TCPInterface() {
   close(this->fd_);
 }

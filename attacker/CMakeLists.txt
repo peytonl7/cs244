@@ -14,13 +14,13 @@ FetchContent_Declare(
   GIT_TAG "0.8.0")
 FetchContent_MakeAvailable(argparse)
 
-add_library(tcp-raw
-  src/tcp-raw/interface.cpp
-  src/tcp-raw/exceptions.cpp)
-target_include_directories(tcp-raw
-  PUBLIC include/tcp-raw/)
+add_library(tcp-interface
+  src/tcp-interface/interface.cpp
+  src/tcp-interface/exceptions.cpp)
+target_include_directories(tcp-interface
+  PUBLIC include/tcp-interface/)
 
 add_executable(detect-ports
   src/detect-ports/main.cpp)
 target_link_libraries(detect-ports
-  PRIVATE tcp-raw argparse)
+  PRIVATE tcp-interface argparse)
