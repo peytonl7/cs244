@@ -48,9 +48,9 @@ struct TCPPacket {
   */
   uint32_t seqno;
   std::optional<uint32_t> ackno;
-  bool syn;
-  bool fin;
-  bool rst;
+  bool syn = false;
+  bool fin = false;
+  bool rst = false;
   /** @} */
 
   /**
@@ -60,7 +60,7 @@ struct TCPPacket {
     maximum length of the data much lower than the maximum. This is inefficient,
     but it's a good way to ensure that we don't accidentally send too much.
   */
-  std::string data;
+  std::string data{};
   /**
     \brief Maximum length of the `data`
     \details This only applies to packets we send, not received packets
