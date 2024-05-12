@@ -23,8 +23,10 @@ struct TCPPacket {
     give the last set of digits in the IP address.
   */
   struct Address {
-    uint32_t ip;
-    uint16_t port;
+    using IP = uint32_t;
+    using Port = uint16_t;
+    IP ip;
+    Port port;
   };
 
   /**

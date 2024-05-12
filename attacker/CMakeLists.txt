@@ -26,7 +26,13 @@ target_include_directories(tcp-interface
 target_link_libraries(tcp-interface
   PUBLIC tcp-packet)
 
+add_library(topology INTERFACE)
+target_include_directories(topology
+  INTERFACE include/topology/)
+
 add_executable(detect-ports
   src/detect-ports/main.cpp)
 target_link_libraries(detect-ports
-  PRIVATE tcp-interface argparse)
+  PRIVATE tcp-interface topology argparse)
+target_include_directories(detect-ports
+  PRIVATE include/detect-ports/)

@@ -40,8 +40,12 @@ template <class V, class It> static void wr_u(It it, V val) {
 // specific function is used to read integers from IP and TCP headers.
 template <class V, class It> static V rd_u(It it) {
   V ret = 0;
-  for (size_t i = 0; i < sizeof(V); i++)
-    ret |= static_cast<V>(*it++) << (8 * (sizeof(V) - 1 - i));
+  for (size_t i = 0; i < sizeof(V); i++) {
+    // Make sure this doesn't sign extend
+    uint8_t v_u8 = *it++;
+    V v_v = static_cast<V>(v_u8);
+    ret |= v_v << (8 * (sizeof(V) - 1 - i));
+  }
   return ret;
 }
 
@@ -199,21 +203,19 @@ TCPPacket::deserialize(std::string_view data) noexcept {
   size_t payload_offset = ((tcp_data[12] >> 4) & 0x0f) * 4;
   std::string_view payload_data = tcp_data.substr(payload_offset);
 
-  return TCPPacket{
-      .src = Address{.ip = rd_u<uint32_t>(data.begin() + 12),
-                     .port = rd_u<uint16_t>(tcp_data.begin() + 0)},
-      .dst = Address{.ip = rd_u<uint32_t>(data.begin() + 16),
-                     .port = rd_u<uint16_t>(tcp_data.begin() + 2)},
-      .ttl = static_cast<uint8_t>(data[8]),
-      .window_size = rd_u<uint16_t>(tcp_data.begin() + 14),
-      .seqno = rd_u<uint32_t>(tcp_data.begin() + 4),
-      .ackno =
-          (tcp_data[13] & 0x10)
-              ? std::optional<uint32_t>{rd_u<uint32_t>(tcp_data.begin() + 8)}
-              : std::nullopt,
-      .syn = (tcp_data[13] & 0x02) != 0,
-      .fin = (tcp_data[13] & 0x01) != 0,
-      .rst = (tcp_data[13] & 0x04) != 0,
-      .data = std::string{payload_data}
-  };
+  return TCPPacket{.src = Address{.ip = rd_u<uint32_t>(data.begin() + 12),
+                                  .port = rd_u<uint16_t>(tcp_data.begin() + 0)},
+                   .dst = Address{.ip = rd_u<uint32_t>(data.begin() + 16),
+                                  .port = rd_u<uint16_t>(tcp_data.begin() + 2)},
+                   .ttl = static_cast<uint8_t>(data[8]),
+                   .window_size = rd_u<uint16_t>(tcp_data.begin() + 14),
+                   .seqno = rd_u<uint32_t>(tcp_data.begin() + 4),
+                   .ackno = (tcp_data[13] & 0x10)
+                                ? std::optional<uint32_t>{rd_u<uint32_t>(
+                                      tcp_data.begin() + 8)}
+                                : std::nullopt,
+                   .syn = (tcp_data[13] & 0x02) != 0,
+                   .fin = (tcp_data[13] & 0x01) != 0,
+                   .rst = (tcp_data[13] & 0x04) != 0,
+                   .data = std::string{payload_data}};
 }
