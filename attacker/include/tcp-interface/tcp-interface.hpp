@@ -6,6 +6,7 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
 #include <stdexcept>
 #include <string>
 
@@ -19,7 +20,12 @@ public:
     \param interface The name of the TUN device to use
     \throws SetupError If the TUN device cannot be opened
   */
-  explicit TCPInterface(const std::string &interface = "tun0");
+  explicit TCPInterface(const std::string &interface);
+  /**
+    \brief Constructs an interface on `tun0`
+    \see TCPInterface(const std::string &interface)
+  */
+  explicit TCPInterface() : TCPInterface("tun0") {}
   /**
     \brief Closes the interface
   */
@@ -45,11 +51,19 @@ public:
 
   /**
     \brief Try to receive a TCP packet from this interface
-    \details The timeout must be specified - there's no way to delay forever
+
+    The timeout must be specified - there's no way to delay forever. If the
+    timeout is negative or zero, this function returns immediately with any data
+    it can find.
+
+    \param filter A function that returns true if the packet should be accepted
+    \param timeout The maximum time to wait for a packet
     \return The packet, or `std::nullopt` if the timeout elapsed
     \throws ReceiveError If the packet could not be received
   */
-  std::optional<TCPPacket> receive(std::chrono::milliseconds timeout);
+  std::optional<TCPPacket>
+  receive(std::function<bool(const TCPPacket &)> filter,
+          std::chrono::milliseconds timeout);
 
   /**
     \brief Exception thrown when the TUN device cannot be opened

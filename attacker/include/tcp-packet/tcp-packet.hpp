@@ -27,6 +27,11 @@ struct TCPPacket {
     using Port = uint16_t;
     IP ip;
     Port port;
+
+    /** \brief Check if two addresses are equal */
+    bool operator==(const Address &other) const noexcept {
+      return this->ip == other.ip && this->port == other.port;
+    }
   };
 
   /**
@@ -76,8 +81,19 @@ struct TCPPacket {
   */
   std::optional<std::string> serialize() const noexcept;
 
-  static std::optional<TCPPacket>
-  deserialize(std::string_view data) noexcept;
+  /**
+    \brief Try to deserialize a packet from a string of bytes
+    \return The deserialized packet, or nothing if the data is bad
+  */
+  static std::optional<TCPPacket> deserialize(std::string_view data) noexcept;
+
+  /**
+    \brief Check whether two packets are "basically" the same
+
+    This check ignores the TTL field since it's changed by intermediate hops.
+    Otherwise, this only returns true if all the fields are the same.
+  */
+  bool operator==(const TCPPacket &that) const noexcept;
 
 private:
   /**

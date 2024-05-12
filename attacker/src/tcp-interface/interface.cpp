@@ -104,7 +104,8 @@ bool TCPInterface::send(const TCPPacket &packet) {
 }
 
 std::optional<TCPPacket>
-TCPInterface::receive(std::chrono::milliseconds timeout) {
+TCPInterface::receive(std::function<bool(const TCPPacket &)> filter,
+                      std::chrono::milliseconds timeout) {
 
   // If the timeout is negative, round it up to zero
   if (timeout < std::chrono::milliseconds{0})
@@ -156,12 +157,16 @@ TCPInterface::receive(std::chrono::milliseconds timeout) {
     if (len < 0)
       throw TCPInterface::ReceiveError{};
 
-    // Parse the packet. If we get something valid, we can return that.
-    // otherwise, we can keep polling.
+    // Parse the packet. If we don't have anything valid, just retry.
     std::optional<TCPPacket> packet =
         TCPPacket::deserialize(std::string_view{buf, static_cast<size_t>(len)});
-    if (packet.has_value())
+    if (!packet.has_value())
+      continue;
+
+    // Return the packet if it meets our criteria
+    if (filter(packet.value()))
       return packet;
+    // Otherwise, keep trying
     continue;
   }
 }
