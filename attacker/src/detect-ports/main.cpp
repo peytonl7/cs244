@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
                   },
               .router_ip = 0x0af48104,
               .attacker_ip = 0x0af40180,
-              .ttl_drop = 3,
+              .server_ttl_drop = 3,
           },
       .scan_port = 40917,
       .timeout = std::chrono::milliseconds(1000),
@@ -74,7 +74,7 @@ static RunStatus run(Configuration &config) {
   send_pkt(config, TCPPacket{
                        .src = attacker_addr,
                        .dst = config.topology.server_addr,
-                       .ttl = config.topology.ttl_drop,
+                       .ttl = config.topology.server_ttl_drop,
                        .seqno = attacker_isn,
                        .ackno = std::nullopt,
                        .syn = true,

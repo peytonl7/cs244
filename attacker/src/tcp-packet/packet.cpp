@@ -31,14 +31,14 @@ uint16_t cksum(std::string_view data) { return ~cksum_neg(data); }
 
 // Write an unsigned integer to an iterator, in big-endian order. This very
 // specific function is used to write integers into IP and TCP headers.
-template <class V, class It> static void wr_u(It it, V val) {
+template <class V, class It> void wr_u(It it, V val) {
   for (size_t i = 0; i < sizeof(V); i++)
     *it++ = (val >> (8 * (sizeof(V) - 1 - i))) & 0xff;
 }
 
 // Read an unsigned integer from an iterator, in big-endian order. This very
 // specific function is used to read integers from IP and TCP headers.
-template <class V, class It> static V rd_u(It it) {
+template <class V, class It> V rd_u(It it) {
   V ret = 0;
   for (size_t i = 0; i < sizeof(V); i++) {
     // Make sure this doesn't sign extend

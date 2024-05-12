@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <stdexcept>
+
 #include "tcp-packet.hpp"
 
 struct Topology {
@@ -31,5 +33,21 @@ struct Topology {
     server, but for them to never actually reach. This fields is a TTL value
     that gives packets this property.
   */
-  uint8_t ttl_drop;
+  uint8_t server_ttl_drop;
+
+  /**
+    \brief Parse a topology from a file
+    \param filename The name of the file to parse
+    \return The parsed topology
+    \throws ParseError If the file is not formatted correctly
+  */
+  static Topology parse(const std::string &filename);
+
+  /** \brief Exception thrown if a topology file cannot be read */
+  class ReadError : public std::runtime_error {
+  public:
+    ReadError(const std::string &filename, const std::string &message)
+        : std::runtime_error("Failed to read topology file `" + filename +
+                             "`: " + message) {}
+  };
 };

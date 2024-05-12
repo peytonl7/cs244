@@ -65,26 +65,19 @@ public:
   receive(std::function<bool(const TCPPacket &)> filter,
           std::chrono::milliseconds timeout);
 
-  /**
-    \brief Exception thrown when the TUN device cannot be opened
-  */
+  /** \brief Exception thrown when the TUN device cannot be opened */
   class SetupError : public std::runtime_error {
   public:
     explicit SetupError(const std::string &interface) noexcept
         : std::runtime_error("Failed to open TUN device: " + interface){};
   };
-  /**
-    \brief Exception thrown on send failure
-  */
+  /** \brief Exception thrown on send failure */
   class SendError : public std::runtime_error {
   public:
     explicit SendError() noexcept
         : std::runtime_error("Failed to send on TUN device") {}
   };
-
-  /**
-    \brief Exception thrown on receive failure
-  */
+  /** \brief Exception thrown on receive failure */
   class ReceiveError : public std::runtime_error {
   public:
     explicit ReceiveError() noexcept
