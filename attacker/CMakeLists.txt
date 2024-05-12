@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.28.3)
 project("CS 244 Attacker" LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
@@ -36,7 +34,8 @@ target_link_libraries(topology
   PUBLIC tcp-packet yaml-cpp::yaml-cpp)
 
 add_executable(detect-ports
-  src/detect-ports/main.cpp)
+  src/detect-ports/main.cpp
+  src/detect-ports/configuration.cpp)
 target_include_directories(detect-ports
   PRIVATE include/detect-ports/)
 target_link_libraries(detect-ports

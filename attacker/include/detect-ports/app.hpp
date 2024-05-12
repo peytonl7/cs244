@@ -8,6 +8,7 @@
 #include <chrono>
 
 #include "tcp-interface.hpp"
+#include "tcp-packet.hpp"
 #include "topology.hpp"
 
 /**
@@ -16,12 +17,22 @@
 struct Configuration {
 
   /** \brief The interface to send on */
-  TCPInterface &interface;
+  TCPInterface interface;
   /** \brief The topology of the network to attack */
-  const Topology &topology;
+  Topology topology;
 
-  /** \brief The port to scan for connections on */
-  TCPPacket::Address::Port scan_port;
+  /** \see scan_port_range */
+  struct PortRange {
+    TCPPacket::Address::Port start;
+    TCPPacket::Address::Port end;
+  };
+  /**
+    \brief The range of ports to scan for connections on
+
+    The elements of the pair are the start and end of the range. Both ends are
+    inclusive.
+  */
+  PortRange scan_port_range;
 
   /** \brief How long to wait between sending and receiving */
   std::chrono::milliseconds timeout;
@@ -29,6 +40,15 @@ struct Configuration {
   std::chrono::milliseconds packet_delay;
   /** \brief How many time to duplicate packets */
   size_t packet_redundancy;
+
+  /** \brief Whether or not to use control codes */
+  bool dumb_terminal;
+
+  /**
+    \brief Get the Configuration from command-line arguments
+    \details This subroutine will exit on failure
+  */
+  static Configuration args(int argc, char **argv);
 };
 
 /** \brief Possible results of this attack */

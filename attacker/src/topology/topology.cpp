@@ -100,19 +100,19 @@ Topology Topology::parse(const std::string &filename) {
   try {
 
     // Read the file in
-    YAML::Node cfg = YAML::LoadFile(filename);
+    YAML::Node top = YAML::LoadFile(filename);
 
     return Topology{
         .server_addr =
             {
-                .ip = node_as_ip(filename, cfg["server"]["ip"], "server.ip"),
+                .ip = node_as_ip(filename, top["server"]["ip"], "server.ip"),
                 .port = node_as<TCPPacket::Address::Port>(
-                    filename, cfg["server"]["port"], "server.port"),
+                    filename, top["server"]["port"], "server.port"),
             },
-        .router_ip = node_as_ip(filename, cfg["router"]["ip"], "router.ip"),
+        .router_ip = node_as_ip(filename, top["router"]["ip"], "router.ip"),
         .attacker_ip =
-            node_as_ip(filename, cfg["attacker"]["ip"], "attacker.ip"),
-        .server_ttl_drop = node_as<uint8_t>(filename, cfg["server"]["ttl-drop"],
+            node_as_ip(filename, top["attacker"]["ip"], "attacker.ip"),
+        .server_ttl_drop = node_as<uint8_t>(filename, top["server"]["ttl-drop"],
                                             "server.ttl-drop"),
     };
 
