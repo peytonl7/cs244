@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <net/if.h>
+#include <poll.h>
 #include <unistd.h>
 
 #include <asm/types.h>
@@ -100,4 +101,67 @@ bool TCPInterface::send(const TCPPacket &packet) {
     throw TCPInterface::SendError{};
   // Return successfully
   return true;
+}
+
+std::optional<TCPPacket>
+TCPInterface::receive(std::chrono::milliseconds timeout) {
+
+  // If the timeout is negative, round it up to zero
+  if (timeout < std::chrono::milliseconds{0})
+    timeout = std::chrono::milliseconds{0};
+
+  // Setup the file descriptor list for `poll`
+  struct pollfd poll_fd {
+    .fd = this->fd_, .events = POLLIN,
+  };
+
+  // Continuously read from the file until we either get a valid TCP packet or
+  // the timeout elapses.
+  while (true) {
+    // Wait for the file descriptor to be ready. Keep track of how much time
+    // elapsed.
+    int res;
+    std::chrono::steady_clock::duration elapsed;
+    {
+      auto start = std::chrono::steady_clock::now();
+      res = poll(&poll_fd, 1, timeout.count());
+      auto end = std::chrono::steady_clock::now();
+      elapsed = end - start;
+    }
+    // Update the timeout with the time elapsed. It's better if we overestimate
+    // by 1ms than underestimate and potentially loop forever.
+    timeout -= std::chrono::ceil<std::chrono::milliseconds>(elapsed);
+
+    // If the timeout elapsed, we're done
+    if (res == 0 or timeout <= std::chrono::milliseconds{0})
+      return std::nullopt;
+    // If it failed, we might be able to try again. Check if it failed with
+    // EINTR or EAGAIN.
+    if (res < 0) {
+      if (errno == EINTR || errno == EAGAIN)
+        continue;
+      throw TCPInterface::ReceiveError{};
+    }
+
+    // If an error happened on the socket, we can't do anything about it
+    if (poll_fd.revents & (POLLERR | POLLHUP | POLLNVAL))
+      throw TCPInterface::ReceiveError{};
+    // If the socket isn't ready to read, keep polling
+    if (!(poll_fd.revents & POLLIN))
+      continue;
+
+    // Read the packet. Overprovision the buffer to avoid truncation.
+    char buf[4096];
+    int len = read(this->fd_, buf, sizeof(buf));
+    if (len < 0)
+      throw TCPInterface::ReceiveError{};
+
+    // Parse the packet. If we get something valid, we can return that.
+    // otherwise, we can keep polling.
+    std::optional<TCPPacket> packet =
+        TCPPacket::deserialize(std::string_view{buf, static_cast<size_t>(len)});
+    if (packet.has_value())
+      return packet;
+    continue;
+  }
 }

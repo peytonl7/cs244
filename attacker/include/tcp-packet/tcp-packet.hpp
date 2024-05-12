@@ -74,8 +74,10 @@ struct TCPPacket {
   */
   std::optional<std::string> serialize() const noexcept;
 
-private:
+  static std::optional<TCPPacket>
+  deserialize(std::string_view data) noexcept;
 
+private:
   /**
     \brief Helper functions for serialization
     \details None of the returned values have their checksums populated

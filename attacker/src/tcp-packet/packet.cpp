@@ -11,7 +11,7 @@ uint16_t fold(uint32_t sum) {
 
 // Compute the checksum of some data, as is required by IP and TCP. This doesn't
 // bitwise-NOT the result, so the caller should post-process.
-uint16_t cksum_neg(const std::string_view data) {
+uint16_t cksum_neg(std::string_view data) {
   // Sum over all the pairs of bytes in the data. If the last byte is not part
   // of a pair, pad with zero.
   uint32_t sum = 0;
@@ -27,13 +27,22 @@ uint16_t cksum_neg(const std::string_view data) {
 
 // Compute the checksum of some data, as is required by IP and TCP. This one
 // does the bitwise-NOT, so the caller doesn't have to.
-uint16_t cksum(const std::string_view data) { return ~cksum_neg(data); }
+uint16_t cksum(std::string_view data) { return ~cksum_neg(data); }
 
-// Write an unsigned integer to a string's iterator, in big-endian order. This
-// very specific function is used to write integers into IP and TCP headers.
-template <class V> static void wr_u(std::string::iterator it, V val) {
+// Write an unsigned integer to an iterator, in big-endian order. This very
+// specific function is used to write integers into IP and TCP headers.
+template <class V, class It> static void wr_u(It it, V val) {
   for (size_t i = 0; i < sizeof(V); i++)
     *it++ = (val >> (8 * (sizeof(V) - 1 - i))) & 0xff;
+}
+
+// Read an unsigned integer from an iterator, in big-endian order. This very
+// specific function is used to read integers from IP and TCP headers.
+template <class V, class It> static V rd_u(It it) {
+  V ret = 0;
+  for (size_t i = 0; i < sizeof(V); i++)
+    ret |= static_cast<V>(*it++) << (8 * (sizeof(V) - 1 - i));
+  return ret;
 }
 
 }; // namespace
@@ -55,10 +64,10 @@ std::optional<std::string> TCPPacket::serialize() const noexcept {
   uint16_t ip_cksum = cksum(ip_header);
   uint16_t tcp_cksum;
   {
-    uint32_t c1 = cksum_neg(pseudo_header);
-    uint32_t c2 = cksum_neg(tcp_header);
-    uint32_t c3 = cksum_neg(data);
-    tcp_cksum = ~fold(c1 + c2 + c3);
+    uint32_t c0 = cksum_neg(pseudo_header);
+    uint32_t c1 = cksum_neg(tcp_header);
+    uint32_t c2 = cksum_neg(data);
+    tcp_cksum = ~fold(c0 + c1 + c2);
   }
 
   // Put the checksums in the headers
@@ -146,4 +155,65 @@ TCPPacket::serialize_pseudo_header(size_t data_length) const noexcept {
   wr_u<uint16_t>(ret.begin() + 10, 20 + data_length);
 
   return ret;
+}
+
+std::optional<TCPPacket>
+TCPPacket::deserialize(std::string_view data) noexcept {
+
+  // We should have at least enough data for at least the IP header
+  if (data.size() < 20)
+    return std::nullopt;
+  // Run the checksum on the IP header
+  if (cksum(data.substr(0, 20)) != 0)
+    return std::nullopt;
+  // Check that the length is correct - i.e. that we got everything
+  if (rd_u<uint16_t>(data.begin() + 2) != data.size())
+    return std::nullopt;
+  // Check that the protocol is TCP. If not, drop it.
+  if (data[9] != 0x06)
+    return std::nullopt;
+
+  // Get a pointer to the TCP data. The offset might not be 20 if the sender has
+  // options. Also, check we have enough room in the remaining data for a TCP
+  // header.
+  size_t tcp_offset = ((data[0] >> 0) & 0x0f) * 4;
+  std::string_view tcp_data = data.substr(tcp_offset);
+  if (tcp_data.size() < 20)
+    return std::nullopt;
+  // Construct the pseudo-header from the IP header
+  std::string pseudo_header = std::string(12, 0);
+  std::copy(data.begin() + 12, data.begin() + 20, pseudo_header.begin());
+  pseudo_header[8] = 0x00;
+  pseudo_header[9] = 0x06;
+  wr_u<uint16_t>(pseudo_header.begin() + 10, data.size() - 20);
+
+  // Compute the checksum for TCP and check it matches
+  {
+    uint32_t c0 = cksum_neg(pseudo_header);
+    uint32_t c1 = cksum_neg(tcp_data);
+    if (~fold(c0 + c1) & 0xffff)
+      return std::nullopt;
+  }
+  // Get the offset to the actual data from the start of the TCP data. Again,
+  // the sender might have put options, so the offset might not be 20.
+  size_t payload_offset = ((tcp_data[12] >> 4) & 0x0f) * 4;
+  std::string_view payload_data = tcp_data.substr(payload_offset);
+
+  return TCPPacket{
+      .src = Address{.ip = rd_u<uint32_t>(data.begin() + 12),
+                     .port = rd_u<uint16_t>(tcp_data.begin() + 0)},
+      .dst = Address{.ip = rd_u<uint32_t>(data.begin() + 16),
+                     .port = rd_u<uint16_t>(tcp_data.begin() + 2)},
+      .ttl = static_cast<uint8_t>(data[8]),
+      .window_size = rd_u<uint16_t>(tcp_data.begin() + 14),
+      .seqno = rd_u<uint32_t>(tcp_data.begin() + 4),
+      .ackno =
+          (tcp_data[13] & 0x10)
+              ? std::optional<uint32_t>{rd_u<uint32_t>(tcp_data.begin() + 8)}
+              : std::nullopt,
+      .syn = (tcp_data[13] & 0x02) != 0,
+      .fin = (tcp_data[13] & 0x01) != 0,
+      .rst = (tcp_data[13] & 0x04) != 0,
+      .data = std::string{payload_data}
+  };
 }
