@@ -106,7 +106,7 @@ RunStatus run(Configuration &config, TCPPacket::Address::Port scan_port) {
   // Check to see if we actually received it. Make sure the attributes of the
   // packet match what we're expecting, otherwise, it could've been from an old
   // probe.
-  std::optional<TCPPacket> response = config.interface.receive(
+  std::optional<TCPPacket> response = config.topology.interface.receive(
       [&spoofed_to_attacker](const TCPPacket &pkt) -> bool {
         // Ignore reset packets
         if (pkt.rst)
@@ -137,7 +137,7 @@ RunStatus run(Configuration &config, TCPPacket::Address::Port scan_port) {
 
 void send_pkt(Configuration &config, const TCPPacket &packet) {
   for (size_t i = 0; i < config.packet_redundancy; i++) {
-    config.interface.send(packet);
+    config.topology.interface.send(packet);
     std::this_thread::sleep_for(config.packet_delay);
   }
 }

@@ -11,12 +11,15 @@
 
 #include <stdexcept>
 
+#include "tcp-interface.hpp"
 #include "tcp-packet.hpp"
 
 struct Topology {
-  /**
-    \brief IP and Port of the server
-  */
+
+  /** \brief Our interface onto the network */
+  TCPInterface interface;
+
+  /** \brief IP and Port of the server */
   TCPPacket::Address server_addr;
 
   /**

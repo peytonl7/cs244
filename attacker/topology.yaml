@@ -1,3 +1,4 @@
+interface: tun0
 server:
   ip: 10.244.129.5
   port: 2440

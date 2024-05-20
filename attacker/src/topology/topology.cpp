@@ -102,7 +102,12 @@ Topology Topology::parse(const std::string &filename) {
     // Read the file in
     YAML::Node top = YAML::LoadFile(filename);
 
+    // Get the name of the interface to work on
+    std::string interface_name =
+        node_as<std::string>(filename, top["interface"], "interface");
+
     return Topology{
+        .interface = TCPInterface{interface_name},
         .server_addr =
             {
                 .ip = node_as_ip(filename, top["server"]["ip"], "server.ip"),

@@ -31,7 +31,7 @@ add_library(topology
 target_include_directories(topology
   PUBLIC include/topology/)
 target_link_libraries(topology
-  PUBLIC tcp-packet yaml-cpp::yaml-cpp)
+  PUBLIC tcp-interface yaml-cpp::yaml-cpp)
 
 add_executable(detect-ports
   src/detect-ports/main.cpp

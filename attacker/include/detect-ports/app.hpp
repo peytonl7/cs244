@@ -7,7 +7,6 @@
 
 #include <chrono>
 
-#include "tcp-interface.hpp"
 #include "tcp-packet.hpp"
 #include "topology.hpp"
 
@@ -16,8 +15,6 @@
 */
 struct Configuration {
 
-  /** \brief The interface to send on */
-  TCPInterface interface;
   /** \brief The topology of the network to attack */
   Topology topology;
 

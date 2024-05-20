@@ -7,64 +7,59 @@
 
 Configuration Configuration::args(int argc, char **argv) {
 
-  // Topology to be populated when the argument is encountered
-  Topology top;
-
   argparse::ArgumentParser parser{"detect-ports"};
   parser.add_argument("-t", "--topology")
-    .help("Specifies the topology for the attack")
-    .metavar("TOPOLOGY")
-    .required()
-    .action([&top](const std::string &filename) {
-      top = Topology::parse(filename);
-    });
+      .help("Specifies the topology for the attack")
+      .metavar("TOPOLOGY")
+      .required();
   parser.add_argument("start")
-    .help("The start of the range to probe (inclusive)")
-    .metavar("START")
-    .scan<'d', uint16_t>()
-    .required();
+      .help("The start of the range to probe (inclusive)")
+      .metavar("START")
+      .scan<'d', uint16_t>()
+      .required();
   parser.add_argument("end")
-    .help("The end of the range to probe (inclusive)")
-    .metavar("END")
-    .scan<'d', uint16_t>()
-    .required();
+      .help("The end of the range to probe (inclusive)")
+      .metavar("END")
+      .scan<'d', uint16_t>()
+      .required();
   parser.add_argument("-i", "--interface")
-    .help("The TUN device to work with")
-    .metavar("TUN")
-    .default_value(std::string("tun0"));
+      .help("The TUN device to work with")
+      .metavar("TUN")
+      .default_value(std::string("tun0"));
   parser.add_argument("-d", "--timeout")
-    .help("How long to wait between sending and receiving")
-    .metavar("TIMEOUT")
-    .scan<'d', size_t>()
-    .default_value<size_t>(500);
+      .help("How long to wait between sending and receiving")
+      .metavar("TIMEOUT")
+      .scan<'d', size_t>()
+      .default_value<size_t>(500);
   parser.add_argument("-e", "--delay")
-    .help("How long to wait between sending consecutive packets")
-    .metavar("DELAY")
-    .scan<'d', size_t>()
-    .default_value<size_t>(100);
+      .help("How long to wait between sending consecutive packets")
+      .metavar("DELAY")
+      .scan<'d', size_t>()
+      .default_value<size_t>(100);
   parser.add_argument("-r", "--redundancy")
-    .help("How many duplicates of each packet to send")
-    .metavar("REDUNDANCY")
-    .scan<'d', size_t>()
-    .default_value<size_t>(2);
+      .help("How many duplicates of each packet to send")
+      .metavar("REDUNDANCY")
+      .scan<'d', size_t>()
+      .default_value<size_t>(2);
   parser.add_argument("--dumb-terminal")
-    .help("Don't use control codes")
-    .default_value(false)
-    .implicit_value(true);
+      .help("Don't use control codes")
+      .default_value(false)
+      .implicit_value(true);
 
   try {
     parser.parse_args(argc, argv);
     return Configuration{
-      .interface = TCPInterface{parser.get<std::string>("--interface")},
-      .topology = top,
-      .scan_port_range = {
-        .start = parser.get<uint16_t>("start"),
-        .end = parser.get<uint16_t>("end"),
-      },
-      .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
-      .packet_delay = std::chrono::milliseconds{parser.get<size_t>("--delay")},
-      .packet_redundancy = parser.get<size_t>("--redundancy"),
-      .dumb_terminal = parser.get<bool>("--dumb-terminal"),
+        .topology = Topology::parse(parser.get<std::string>("--topology")),
+        .scan_port_range =
+            {
+                .start = parser.get<uint16_t>("start"),
+                .end = parser.get<uint16_t>("end"),
+            },
+        .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
+        .packet_delay =
+            std::chrono::milliseconds{parser.get<size_t>("--delay")},
+        .packet_redundancy = parser.get<size_t>("--redundancy"),
+        .dumb_terminal = parser.get<bool>("--dumb-terminal"),
     };
 
   } catch (const Topology::ReadError &e) {
