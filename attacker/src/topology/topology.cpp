@@ -1,4 +1,4 @@
-#include "yaml-cpp/yaml.h"
+#include "yaml-cpp/yaml.h" // IWYU pragma: keep
 
 #include "tcp-packet.hpp"
 #include "topology.hpp"
