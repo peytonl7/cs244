@@ -202,6 +202,10 @@ TCPPacket::deserialize(std::string_view data) noexcept {
   // the sender might have put options, so the offset might not be 20.
   size_t payload_offset = ((tcp_data[12] >> 4) & 0x0f) * 4;
   std::string_view payload_data = tcp_data.substr(payload_offset);
+  // Make sure that the payload offset doesn't point outside of the TCP data. If
+  // it does, the packet is invalid.
+  if (payload_offset > tcp_data.size())
+    return std::nullopt;
 
   return TCPPacket{.src = Address{.ip = rd_u<uint32_t>(data.begin() + 12),
                                   .port = rd_u<uint16_t>(tcp_data.begin() + 0)},
