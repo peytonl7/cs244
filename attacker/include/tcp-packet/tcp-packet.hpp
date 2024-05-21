@@ -58,6 +58,7 @@ struct TCPPacket {
   bool syn = false;
   bool fin = false;
   bool rst = false;
+  bool psh = false;
   /** @} */
 
   /**

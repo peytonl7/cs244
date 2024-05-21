@@ -132,6 +132,8 @@ std::string TCPPacket::serialize_tcp_header(size_t data_length) const noexcept {
       ret[13] |= 0x02;
     if (this->fin)
       ret[13] |= 0x01;
+    if (this->psh)
+      ret[13] |= 0x08;
   }
   // Window size
   wr_u<uint16_t>(ret.begin() + 14, this->window_size);
