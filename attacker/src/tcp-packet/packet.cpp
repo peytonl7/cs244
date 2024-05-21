@@ -222,6 +222,7 @@ TCPPacket::deserialize(std::string_view data) noexcept {
                                 : std::nullopt,
                    .syn = (tcp_data[13] & 0x02) != 0,
                    .fin = (tcp_data[13] & 0x01) != 0,
+                   .psh = (tcp_data[13] & 0x08) != 0,
                    .rst = (tcp_data[13] & 0x04) != 0,
                    .data = std::string{payload_data}};
 }

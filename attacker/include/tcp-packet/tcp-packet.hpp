@@ -57,8 +57,8 @@ struct TCPPacket {
   std::optional<uint32_t> ackno;
   bool syn = false;
   bool fin = false;
-  bool rst = false;
   bool psh = false;
+  bool rst = false;
   /** @} */
 
   /**
