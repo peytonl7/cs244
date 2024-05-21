@@ -4,6 +4,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
+option(YAML_CPP_BUILD_TOOLS ON)
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY "https://github.com/p-ranav/argparse.git"
@@ -39,4 +40,12 @@ add_executable(detect-ports
 target_include_directories(detect-ports
   PRIVATE include/detect-ports/)
 target_link_libraries(detect-ports
+  PRIVATE tcp-interface topology argparse::argparse)
+
+add_executable(close-stream
+  src/close-stream/main.cpp
+  src/close-stream/configuration.cpp)
+target_include_directories(close-stream
+  PRIVATE include/close-stream/)
+target_link_libraries(close-stream
   PRIVATE tcp-interface topology argparse::argparse)
