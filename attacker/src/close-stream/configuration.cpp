@@ -17,10 +17,6 @@ Configuration Configuration::args(int argc, char **argv) {
       .metavar("PORT")
       .scan<'d', uint16_t>()
       .required();
-  parser.add_argument("-i", "--interface")
-      .help("The TUN device to work with")
-      .metavar("TUN")
-      .default_value(std::string("tun0"));
   parser.add_argument("-d", "--timeout")
       .help("How long to wait between sending and receiving")
       .metavar("TIMEOUT")
