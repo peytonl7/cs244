@@ -1,4 +1,5 @@
 #include <argparse/argparse.hpp>
+#include <cstdint>
 #include <iostream>
 
 #include "app.hpp"
@@ -12,14 +13,10 @@ Configuration Configuration::args(int argc, char **argv) {
       .help("Specifies the topology for the attack")
       .metavar("TOPOLOGY")
       .required();
-  parser.add_argument("start")
-      .help("The start of the range to probe (inclusive)")
-      .metavar("START")
-      .scan<'d', uint16_t>()
-      .required();
-  parser.add_argument("end")
-      .help("The end of the range to probe (inclusive)")
-      .metavar("END")
+  parser.add_argument("port-range")
+      .help("The range to probe (inclusive)")
+      .metavar("PORT-RANGE")
+      .nargs(1, 2)
       .scan<'d', uint16_t>()
       .required();
   parser.add_argument("-d", "--timeout")
@@ -43,14 +40,16 @@ Configuration Configuration::args(int argc, char **argv) {
       .implicit_value(true);
 
   try {
+    // Parse
     parser.parse_args(argc, argv);
+    // Get the start and the end of the range since it needs some code
+    auto range = parser.get<std::vector<uint16_t>>("port-range");
+    uint16_t start = range.at(0);
+    uint16_t end = range.size() == 2 ? range.at(1) : start;
+    // Done
     return Configuration{
         .topology = Topology::parse(parser.get<std::string>("--topology")),
-        .scan_port_range =
-            {
-                .start = parser.get<uint16_t>("start"),
-                .end = parser.get<uint16_t>("end"),
-            },
+        .scan_port_range = {.start = start, .end = end},
         .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},
