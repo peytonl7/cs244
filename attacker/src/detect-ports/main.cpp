@@ -29,30 +29,20 @@ int main(int argc, char **argv) {
        p <= config.scan_port_range.end; p++) {
 
     // Print out progress if we can
-    if (!config.dumb_terminal) {
+    if (!config.dumb_terminal)
       std::cout << "\r\E[KScanning port " << p << std::flush;
-    }
 
     // Run the attack on this port
     RunStatus status = run(config, p);
 
-    if (status == RunStatus::OCCUPIED) {
-      // Print if it was a hit
-      std::cout << (config.dumb_terminal ? "" : "\r\E[K") << "OCCUPIED: " << p
-                << std::endl;
-
-    } else {
-      // Print on miss only if we're not displaying progress
-      if (config.dumb_terminal) {
-        std::cout << "free: " << p << std::endl;
-      }
-    }
+    // Print iff it was a hit
+    if (status == RunStatus::OCCUPIED)
+      std::cout << (config.dumb_terminal ? "" : "\r\E[K") << p << std::endl;
   }
 
   // Move the cursor back if needed
-  if (!config.dumb_terminal) {
+  if (!config.dumb_terminal)
     std::cout << "\r\E[K" << std::flush;
-  }
 }
 
 namespace {
