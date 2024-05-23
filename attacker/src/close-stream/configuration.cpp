@@ -8,15 +8,14 @@
 
 Configuration Configuration::args(int argc, char **argv) {
 
-  argparse::ArgumentParser parser{"detect-ports"};
+  argparse::ArgumentParser parser{"close-stream"};
   parser.add_argument("-t", "--topology")
       .help("Specifies the topology for the attack")
       .metavar("TOPOLOGY")
       .required();
-  parser.add_argument("port-range")
-      .help("The range to probe (inclusive)")
-      .metavar("PORT-RANGE")
-      .nargs(1, 2)
+  parser.add_argument("port")
+      .help("The port of an active connection for attempted hijacking")
+      .metavar("PORT")
       .scan<'d', uint16_t>()
       .required();
   parser.add_argument("-d", "--timeout")
@@ -34,27 +33,23 @@ Configuration Configuration::args(int argc, char **argv) {
       .metavar("REDUNDANCY")
       .scan<'d', size_t>()
       .default_value<size_t>(2);
-  parser.add_argument("--dumb-terminal")
-      .help("Don't use control codes")
-      .default_value(false)
-      .implicit_value(true);
+  parser.add_argument("-w", "--router-timeout")
+      .help("How long to wait before attempting to reset the connection at the router")
+      .metavar("ROUTER_TIMEOUT")
+      .scan<'d', size_t>()
+      .default_value<size_t>(1000);
+
 
   try {
-    // Parse
     parser.parse_args(argc, argv);
-    // Get the start and the end of the range since it needs some code
-    auto range = parser.get<std::vector<uint16_t>>("port-range");
-    uint16_t start = range.at(0);
-    uint16_t end = range.size() == 2 ? range.at(1) : start;
-    // Done
     return Configuration{
         .topology = Topology::parse(parser.get<std::string>("--topology")),
-        .scan_port_range = {.start = start, .end = end},
+        .port = parser.get<uint16_t>("port"),
         .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},
         .packet_redundancy = parser.get<size_t>("--redundancy"),
-        .dumb_terminal = parser.get<bool>("--dumb-terminal"),
+        .router_timeout = std::chrono::milliseconds{parser.get<size_t>("--router-timeout")},
     };
 
   } catch (const Topology::ReadError &e) {

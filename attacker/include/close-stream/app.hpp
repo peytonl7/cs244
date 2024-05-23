@@ -18,18 +18,8 @@ struct Configuration {
   /** \brief The topology of the network to attack */
   Topology topology;
 
-  /** \see scan_port_range */
-  struct PortRange {
-    TCPPacket::Address::Port start;
-    TCPPacket::Address::Port end;
-  };
-  /**
-    \brief The range of ports to scan for connections on
-
-    The elements of the pair are the start and end of the range. Both ends are
-    inclusive.
-  */
-  PortRange scan_port_range;
+  /** \brief The port of an active connection for attempted hijacking*/
+  uint16_t port;
 
   /** \brief How long to wait between sending and receiving */
   std::chrono::milliseconds timeout;
@@ -38,8 +28,8 @@ struct Configuration {
   /** \brief How many time to duplicate packets */
   size_t packet_redundancy;
 
-  /** \brief Whether or not to use control codes */
-  bool dumb_terminal;
+  /** \brief How long to wait before attempting to reset the connection at the router */
+  std::chrono::milliseconds router_timeout;
 
   /**
     \brief Get the Configuration from command-line arguments

