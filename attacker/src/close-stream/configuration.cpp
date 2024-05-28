@@ -32,7 +32,7 @@ Configuration Configuration::args(int argc, char **argv) {
       .help("How many duplicates of each packet to send")
       .metavar("REDUNDANCY")
       .scan<'d', size_t>()
-      .default_value<size_t>(2);
+      .default_value<size_t>(1);
   parser.add_argument("-w", "--router-timeout")
       .help("How long to wait before attempting to reset the connection at the router")
       .metavar("ROUTER_TIMEOUT")
@@ -49,7 +49,7 @@ Configuration Configuration::args(int argc, char **argv) {
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},
         .packet_redundancy = parser.get<size_t>("--redundancy"),
-        .router_timeout = std::chrono::seconds{parser.get<size_t>("--router-timeout")},
+        .router_timeout = std::chrono::seconds{1 + parser.get<size_t>("--router-timeout")},
     };
 
   } catch (const Topology::ReadError &e) {
