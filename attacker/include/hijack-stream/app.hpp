@@ -1,6 +1,6 @@
 /**
   \file app.hpp
-  \brief Configuration for the `close-stream` application
+  \brief Configuration for the `hijack-stream` application
 */
 
 #pragma once
