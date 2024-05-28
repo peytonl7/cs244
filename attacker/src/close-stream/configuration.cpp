@@ -37,7 +37,7 @@ Configuration Configuration::args(int argc, char **argv) {
       .help("How long to wait before attempting to reset the connection at the router")
       .metavar("ROUTER_TIMEOUT")
       .scan<'d', size_t>()
-      .default_value<size_t>(1000);
+      .default_value<size_t>(10);
 
 
   try {
@@ -49,7 +49,7 @@ Configuration Configuration::args(int argc, char **argv) {
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},
         .packet_redundancy = parser.get<size_t>("--redundancy"),
-        .router_timeout = std::chrono::milliseconds{parser.get<size_t>("--router-timeout")},
+        .router_timeout = std::chrono::seconds{parser.get<size_t>("--router-timeout")},
     };
 
   } catch (const Topology::ReadError &e) {

