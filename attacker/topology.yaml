@@ -1,7 +1,7 @@
 interface: tun0
 server:
   ip: 10.244.129.5
-  port: 2440
+  port: 2441
   ttl-drop: 3
 router:
   ip: 10.244.129.4
