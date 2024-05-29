@@ -10,6 +10,9 @@
 #include <stdexcept>
 #include <string>
 
+#include <poll.h>
+#include <sys/poll.h>
+
 #include "tcp-packet.hpp"
 
 class TCPInterface {
@@ -64,6 +67,12 @@ public:
   std::optional<TCPPacket>
   receive(std::function<bool(const TCPPacket &)> filter,
           std::chrono::milliseconds timeout);
+
+  /**
+    \brief Returns the TUN device's file descriptor in a Linux pollfd struct.
+  */
+  struct pollfd
+  get_fd();
 
   /** \brief Exception thrown when the TUN device cannot be opened */
   class SetupError : public std::runtime_error {

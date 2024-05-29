@@ -170,3 +170,11 @@ TCPInterface::receive(std::function<bool(const TCPPacket &)> filter,
     continue;
   }
 }
+
+struct pollfd
+TCPInterface::get_fd() {
+  struct pollfd poll_fd {
+    .fd = this->fd_, .events = POLLIN,
+  };
+  return poll_fd;
+}
