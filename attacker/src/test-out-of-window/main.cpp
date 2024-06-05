@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
                        .dst = config.topology.server_addr,
                        .seqno = 0,
                        .ackno = 0,
+                       .psh = true,
                    });
   std::optional<TCPPacket> res = config.topology.interface.receive(
       [&server_isn](const TCPPacket &pkt) -> bool {
