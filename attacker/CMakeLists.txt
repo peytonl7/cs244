@@ -50,7 +50,7 @@ target_include_directories(close-stream
 target_link_libraries(close-stream
   PRIVATE tcp-interface topology argparse::argparse)
 
-  add_executable(hijack-stream
+add_executable(hijack-stream
   src/hijack-stream/main.cpp
   src/hijack-stream/configuration.cpp)
 target_include_directories(hijack-stream
