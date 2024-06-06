@@ -12,6 +12,11 @@ Configuration Configuration::args(int argc, char **argv) {
       .help("Specifies the topology for the attack")
       .metavar("TOPOLOGY")
       .required();
+  parser.add_argument("-o", "--offset")
+      .help("Specifies how much to offset the probe's sequence number")
+      .metavar("OFFSET")
+      .scan<'d', uint32_t>()
+      .default_value<uint32_t>(0u);
   parser.add_argument("-d", "--timeout")
       .help("How long to wait between sending and receiving")
       .metavar("TIMEOUT")
@@ -32,6 +37,7 @@ Configuration Configuration::args(int argc, char **argv) {
     parser.parse_args(argc, argv);
     return Configuration{
         .topology = Topology::parse(parser.get<std::string>("--topology")),
+        .offset = parser.get<uint32_t>("--offset"),
         .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},

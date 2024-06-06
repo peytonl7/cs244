@@ -12,7 +12,6 @@
 
 namespace {
 
-// Send a packet, honoring the delay and redundancy settings
 void send_pkt(Configuration &config, const TCPPacket &packet);
 
 } // namespace
@@ -58,16 +57,13 @@ int main(int argc, char **argv) {
                    });
 
   std::cout << "Performed handshake" << std::endl;
+  std::cout << "Window size: " << syn_ack->window_size << std::endl;
 
-  std::this_thread::sleep_for(std::chrono::seconds{5});
-
-  send_pkt(config, TCPPacket{
-                       .src = attacker_addr,
-                       .dst = config.topology.server_addr,
-                       .seqno = 0,
-                       .ackno = 0,
-                       .psh = true,
-                   });
+  send_pkt(config, TCPPacket{.src = attacker_addr,
+                             .dst = config.topology.server_addr,
+                             .seqno = attacker_isn + 1 + config.offset,
+                             .ackno = server_isn + 1,
+                             .data = "x"});
   std::optional<TCPPacket> res = config.topology.interface.receive(
       [&server_isn](const TCPPacket &pkt) -> bool {
         return pkt.seqno == server_isn + 1;
@@ -75,6 +71,9 @@ int main(int argc, char **argv) {
       config.timeout);
   if (res.has_value()) {
     std::cout << "Got response" << std::endl;
+    std::cout << "Ackno: " << res->ackno.value() << " / " << attacker_isn
+              << std::endl;
+    std::cout << "Delta: " << res->ackno.value() - attacker_isn << std::endl;
   } else {
     std::cout << "No response" << std::endl;
   }
@@ -82,8 +81,8 @@ int main(int argc, char **argv) {
   send_pkt(config, TCPPacket{
                        .src = attacker_addr,
                        .dst = config.topology.server_addr,
-                       .ttl = config.topology.server_ttl_drop,
-                       .seqno = attacker_isn + 1,
+                       .seqno = attacker_isn + (config.offset == 0 ? 2 : 1),
+                       .ackno = server_isn + 1,
                        .rst = true,
                    });
 }
