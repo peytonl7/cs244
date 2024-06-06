@@ -7,7 +7,8 @@
 struct Configuration {
   Topology topology;
 
-  uint32_t offset;
+  uint32_t seqno_offset;
+  uint32_t ackno_offset;
 
   std::chrono::milliseconds timeout;
   std::chrono::milliseconds packet_delay;

@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
 
   send_pkt(config, TCPPacket{.src = attacker_addr,
                              .dst = config.topology.server_addr,
-                             .seqno = attacker_isn + 1 + config.offset,
-                             .ackno = server_isn + 1,
+                             .seqno = attacker_isn + 1 + config.seqno_offset,
+                             .ackno = server_isn + 1 + config.ackno_offset,
                              .data = "x"});
   std::optional<TCPPacket> res = config.topology.interface.receive(
       [&server_isn](const TCPPacket &pkt) -> bool {
@@ -78,13 +78,14 @@ int main(int argc, char **argv) {
     std::cout << "No response" << std::endl;
   }
 
-  send_pkt(config, TCPPacket{
-                       .src = attacker_addr,
-                       .dst = config.topology.server_addr,
-                       .seqno = attacker_isn + (config.offset == 0 ? 2 : 1),
-                       .ackno = server_isn + 1,
-                       .rst = true,
-                   });
+  send_pkt(config,
+           TCPPacket{
+               .src = attacker_addr,
+               .dst = config.topology.server_addr,
+               .seqno = attacker_isn + (config.seqno_offset == 0 ? 2 : 1),
+               .ackno = server_isn + 1,
+               .rst = true,
+           });
 }
 
 namespace {

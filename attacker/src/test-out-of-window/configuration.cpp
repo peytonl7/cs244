@@ -12,9 +12,14 @@ Configuration Configuration::args(int argc, char **argv) {
       .help("Specifies the topology for the attack")
       .metavar("TOPOLOGY")
       .required();
-  parser.add_argument("-o", "--offset")
-      .help("Specifies how much to offset the probe's sequence number")
-      .metavar("OFFSET")
+  parser.add_argument("-s", "--seqno-offset")
+      .help("How much to offset the probe's sequence number")
+      .metavar("SEQNO-OFFSET")
+      .scan<'d', uint32_t>()
+      .default_value<uint32_t>(0u);
+  parser.add_argument("-a", "--ackno-offset")
+      .help("How much to offset the probe's acknowlegement number")
+      .metavar("ACKNO-OFFSET")
       .scan<'d', uint32_t>()
       .default_value<uint32_t>(0u);
   parser.add_argument("-d", "--timeout")
@@ -37,7 +42,8 @@ Configuration Configuration::args(int argc, char **argv) {
     parser.parse_args(argc, argv);
     return Configuration{
         .topology = Topology::parse(parser.get<std::string>("--topology")),
-        .offset = parser.get<uint32_t>("--offset"),
+        .seqno_offset = parser.get<uint32_t>("--seqno-offset"),
+        .ackno_offset = parser.get<uint32_t>("--ackno-offset"),
         .timeout = std::chrono::milliseconds{parser.get<size_t>("--timeout")},
         .packet_delay =
             std::chrono::milliseconds{parser.get<size_t>("--delay")},
