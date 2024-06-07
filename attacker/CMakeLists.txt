@@ -57,3 +57,11 @@ target_include_directories(hijack-stream
   PRIVATE include/hijack-stream/)
 target_link_libraries(hijack-stream
   PRIVATE tcp-interface topology argparse::argparse)
+
+add_executable(test-out-of-window
+  src/test-out-of-window/main.cpp
+  src/test-out-of-window/configuration.cpp)
+target_include_directories(test-out-of-window
+  PRIVATE include/test-out-of-window/)
+target_link_libraries(test-out-of-window
+  PRIVATE tcp-interface topology argparse::argparse)
