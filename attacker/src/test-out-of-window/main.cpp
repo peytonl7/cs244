@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
                              .dst = config.topology.server_addr,
                              .seqno = attacker_isn + 1 + config.seqno_offset,
                              .ackno = server_isn + 1 + config.ackno_offset,
-                             .data = "x"});
+                             .psh = true});
   std::optional<TCPPacket> res = config.topology.interface.receive(
       [&server_isn](const TCPPacket &pkt) -> bool {
         return pkt.seqno == server_isn + 1;
