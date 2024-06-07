@@ -119,6 +119,12 @@ TCPInterface::receive(std::function<bool(const TCPPacket &)> filter,
   // Continuously read from the file until we either get a valid TCP packet or
   // the timeout elapses.
   while (true) {
+    // If we managed to get here with a negative timeout, it's because we polled
+    // once before and were asked to retry. If that happens, just return
+    // nothing, as if we had timed out.
+    if (timeout < std::chrono::milliseconds{0})
+      return std::nullopt;
+
     // Wait for the file descriptor to be ready. Keep track of how much time
     // elapsed.
     int res;
@@ -129,12 +135,14 @@ TCPInterface::receive(std::function<bool(const TCPPacket &)> filter,
       auto end = std::chrono::steady_clock::now();
       elapsed = end - start;
     }
-    // Update the timeout with the time elapsed. It's better if we overestimate
-    // by 1ms than underestimate and potentially loop forever.
+    // Update the timeout with the time elapsed for the next loop. Make sure we
+    // always decrease so we don't loop forever.
     timeout -= std::chrono::ceil<std::chrono::milliseconds>(elapsed);
+    if (elapsed == std::chrono::steady_clock::duration::zero())
+      timeout -= std::chrono::milliseconds{1};
 
     // If the timeout elapsed, we're done
-    if (res == 0 or timeout <= std::chrono::milliseconds{0})
+    if (res == 0)
       return std::nullopt;
     // If it failed, we might be able to try again. Check if it failed with
     // EINTR or EAGAIN.
@@ -171,8 +179,7 @@ TCPInterface::receive(std::function<bool(const TCPPacket &)> filter,
   }
 }
 
-struct pollfd
-TCPInterface::get_fd() {
+struct pollfd TCPInterface::get_fd() {
   struct pollfd poll_fd {
     .fd = this->fd_, .events = POLLIN,
   };
