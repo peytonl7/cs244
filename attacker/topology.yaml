@@ -1,9 +1,29 @@
+# Topology Configuration File
+
+# What TUN device was configured for the attack. This device has to be set up as
+# described in the blog post, with outgoing packets routed onto the network and
+# incoming packets from the server router to it.
 interface: tun0
+
+# Characteristics of the server. Remember that the attack requires the IP and
+# port of the service for probing.
 server:
   ip: 10.244.129.5
   port: 2441
+  # A TTL value that allows packets to reach the router but not to reach the
+  # server. The attack assumes the existence of such a TTL value. We find that 3
+  # is the lowest value that works - +1 for routing on the attacker, and +1 for
+  # the router.
   ttl-drop: 3
+
+# Characteristics of the router. The attack assumes we know the router's
+# external IP address. This can be found by either looking at the router's
+# configuration if you have access to it, or with `traceroute` and `ping -R` as
+# described in the paper.
 router:
   ip: 10.244.129.4
+
+# Characteristics of the attacker. The attack needs to know the IP address of
+# the attacker on the local network. This can be found with `ip address`.
 attacker:
   ip: 10.244.1.128
